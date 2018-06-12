@@ -2,6 +2,7 @@
 title: Think in React - 01 如何设计组件？
 date: 2018-06-11 13:48:27
 tags: react
+categories: 技术分享
 ---
 
 Think in React 这一系列文章旨在解决团队整体技术栈迁移至 React 系中我们所面临的问题以及解决之道。
@@ -51,7 +52,7 @@ class PageClassComponent extends React.PureComponent {
 
 ## 容器型组件
 
-我们通常把拥有如下特性的组件称之为展示型组件：
+我们通常把拥有如下特性的组件称之为容器型组件：
 
 - 描述如何运作
 - <b>没有 DOM 结构(除了包裹用的节点)和样式</b>
@@ -59,14 +60,14 @@ class PageClassComponent extends React.PureComponent {
 - 自身提供数据及表现函数
 - 连接 redux 等并向内传递数据和 action
 - 通常都是有状态的，作为数据源存在
-- 通常通过 HOC 生成，或 render props
+- 通常通过 HOC 生成，或使用 render props
 
 通过这些定义，大家可以发现我们的页面组件（继承自 Page）就是一个典型的容器型组件，他通过 HOC 包装，连接 Redux Store，为内部组件提供数据和 actions
 
-### HOC
+### HOC 高阶组件
 
 简单来说，HOC（high order component）就是一个接收 component 为入参，并返回一个新的 component 的函数
-
+HOC 被用来替代 createClass 时期的 mixin [Mixins Considered Harmful](https://reactjs.org/blog/2016/07/13/mixins-considered-harmful.html)。解决了组件间复用公共数据逻辑的问题。
 先来看一个简单的 withUser HOC 的实现，他提供了 user 对象作为数据传递给被包装的组件
 
 ```js
@@ -97,9 +98,13 @@ const UserPage = withUser(Page) // 漂亮，你得到了一个容器型组件
 - 需要为组件设定静态属性 displayName，这样有助于 debug 时更好的定位到此 HOC 组件
 - 不要忘记将 HOC 组件接收到的 props 传递给被包裹的组件
 - 被包裹的组件的静态属性和方法需要使用 hoistNonReactStatic 提升至 HOC 组件（这也是为何不推荐继承而是使用组合）
-- 柯里化不是必须的，但若需要额外接收参数请使用柯里化，这样符合 Rambda 演算 Unary 的特性，且可以惰性执行函数
+- 需要额外接收参数请使用柯里化，这样符合 Rambda 演算 Unary 的特性，且可以转换为修饰器函数
 
 ### render props
+
+起初它被大量运用在 chenlou 的 react-motion 库中，现在他正式出现在 React 官方文档的高级范式中。
+他允许组件接收一个或多个函数类型的 props（返回值为组件），可以在容器 render 时，动态的将数据传递给这个函数，由此完成数据传递。
+一般我们会使用 props.children 作为 render props。
 
 ```jsx
 import { Page } from './components' // 一个展示型组件
@@ -114,7 +119,9 @@ class UserContainer extends React.Component {
   }
 
   render() {
-    return <>{this.props.children(this.state.user)}</>
+    return (
+      <React.Fragment>{this.props.children(this.state.user)}</React.Fragment>
+    )
   }
 }
 
@@ -131,7 +138,7 @@ class UserPage extends React.Component {
 
 - 由于 render props 不寻常的设计，需要为组件声明 propTypes 的 children 属性为 PropTypes.func.isRequred，以避免错误的使用
 - 不要使用行内的函数声明，虽然他很简单，但在组件 rerender 时，会重新生成一个函数，造成资源浪费，可以把函数转换成组件的方法
-- <></> 是 <React.Fragment></React.Fragment> 的简略表达
+- React.Fragment 为占位标记，不会生成任何结构，符合容器型组件尽量不含 dom 结构的目的
 
 ### 两者比较
 
@@ -144,21 +151,28 @@ class Page extends React.Component {
 }
 ```
 
+- 多个 HOC 同时作用于一个组建时，可以被组合（compose），得益于函数式编程的特性
 - HOC 可以和函数组合一样，组合 N 个 hoc 函数至同一组件，但这样也会带来许多问题诸如 静态属性 的提升，props 的重名问题，同事也会造成 debug 的调用栈过深，以及不知道 props 是从哪一个 HOC 传入的。<b>所以需要谨慎设计你的 HOC</b>
+- 设计 HOC 函数时需要大量的模板代码以支撑上述论点
 - render props 的特性使得他能够够好的支撑运行时，而不像 HOC 那样需要静态组合
 - 我的个人建议：HOC 可以作为顶层的数据和方法传入，而 render props 则适合局部的数据传递
 
+### 好用的第三方库
+
+- [recompose](https://github.com/acdlite/recompose) 提供了一系列相当实用的 HOC 方法
+
 ### 其他实现
 
-当然出于 react props 的自由度，还有许多可作为实现组件服用的方法，比如 Component Inject, 或者 Nested Component。但作为一个团队的开发范式和最佳实践，以及 React 官方的推荐，决定使用上面提到的 2 种范式对组件进行复用。
+当然出于 react props 的自由度，还有许多可作为实现组件复用的方法，比如 Component Inject, 或者 Nested Component。但作为一个团队的开发范式和最佳实践，以及 React 官方的推荐，决定使用上面提到的 2 种范式对组件进行复用。
 
 ## 总结
 
 当我们完成这样的代码切割后，我们最终获得了什么？
 
-- 我们的展示型组件将非常容易测试，因为他们不包含状态，只需要传入相应的数据，就可以验证展示的逻辑是否符合预期
+- 我们的展示型组件将非常容易测试，因为他们不包含状态，只需要传入相应的 props，就可以验证展示的逻辑是否符合预期。今后的章节会介绍如何测试自己的组件，以提高组件的健壮性
 - 当我们熟练运用容器化组件，我们会很容易提取出行为层和数据层，使我们的代码分层更准确更清晰
 
 参考资料：
 
 - [Presentational and Container Components](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0)
+- [A tale of Higher-Order Components & Render Props](https://medium.com/ingenious/a-tale-of-higher-order-components-render-props-a1ba47e8cfeb)
