@@ -38,4 +38,6 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
+      - run: git config --global user.email "$GH_EMAIL"
+      - run: git config --global user.name "$GH_NAME"
       - run: yarn deploy
