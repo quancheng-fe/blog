@@ -38,9 +38,7 @@ const styles = StyleSheet.create({
 })
 
 // 简单的functional component
-const PageFunctionalComponent = props => (
-  <View style={styles.page}>{props.children}</View>
-)
+const PageFunctionalComponent = props => <View style={styles.page}>{props.children}</View>
 
 // 或者你更倾向于 class
 class PageClassComponent extends React.PureComponent {
@@ -119,9 +117,7 @@ class UserContainer extends React.Component {
   }
 
   render() {
-    return (
-      <React.Fragment>{this.props.children(this.state.user)}</React.Fragment>
-    )
+    return <React.Fragment>{this.props.children(this.state.user)}</React.Fragment>
   }
 }
 
@@ -156,6 +152,83 @@ class Page extends React.Component {
 - 设计 HOC 函数时需要大量的模板代码以支撑上述论点
 - render props 的特性使得他能够够好的支撑运行时，而不像 HOC 那样需要静态组合
 - 我的个人建议：HOC 可以作为顶层的数据和方法传入，而 render props 则适合局部的数据传递
+
+### 案例
+
+- Container with restful resource
+
+```js
+const withService = ({ url, params }) => BaseComponent => {
+  class ComponentWithService extends React.Component {
+    constructor(props) {
+      this.initialSnapshot = { params }
+      this.state = {
+        data: null,
+        params
+      }
+    }
+    state = {
+      data: null
+    }
+    componentDidMount() {
+      this.fetchData()
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+      if (!_.isEqual(prevState.params, this.state.params)) {
+        this.fetchData()
+      }
+    }
+
+    fetchData = async () => {
+      const data = await client.post(url, this.state.params)
+      this.setState({ data })
+    }
+
+    setParams = newParams => {
+      this.setState({
+        params: { ...this.state.params, ...newParams }
+      })
+    }
+
+    refresh = () => {
+      this.setState({
+        params: this.initialSnapshot.params
+      })
+    }
+
+    render() {
+      const serviceProps = { state: this.state, setParams: this.setParams, refresh: this.refresh }
+      return <BaseComponent {...this.props} service={serviceProps} />
+    }
+  }
+
+  return ComponentWithService
+}
+
+// 使用
+
+const Page = props => <Page />
+
+withService({
+  url: '/api',
+  params: {
+    a: 1
+  }
+})(Page)
+
+// or
+
+@withService({
+  url: '/api',
+  params: {
+    a: 1
+  }
+})
+class Page extends Component {
+  //...
+}
+```
 
 ### 好用的第三方库
 
