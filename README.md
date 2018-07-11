@@ -20,4 +20,10 @@ yarn new:post
 // 打开source/_posts/xxxx.md
 ```
 
+## 本地预览
+
+```
+yarn dev --open
+```
+
 ## 提交 github merge request
