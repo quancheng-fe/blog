@@ -81,3 +81,4 @@ deploy:
   type: git
   repo: https://github.com/quancheng-fe/blog.git
   branch: gh-pages
+  message: '[ci skip] Site updated: {{ now('YYYY-MM-DD HH:mm:ss') }}' 
