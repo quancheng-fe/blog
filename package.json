@@ -11,6 +11,7 @@
     "new:post": "hexo new"
   },
   "dependencies": {
+    "gitment": "^0.0.3",
     "hexo": "^3.2.0",
     "hexo-deployer-git": "^0.3.1",
     "hexo-generator-archive": "^0.1.4",
